@@ -1,38 +1,36 @@
 // Universidad del Valle de Guatemala
-// BE3029 - Electronica Digital 2
-// Practica de laboratorio 2
+// BE3029 - Electrónica Digital 2
+// Práctica de laboratorio 2
 // Nicole Rodriguez
 // 21/07/2025
 
-// Librerias
 #include <Arduino.h>
 #include <stdint.h>
 
-// Definiciones
+// Definiciones de pines
 #define led1 13
 #define led2 12
 #define led3 14
 #define led4 27
-#define butSumar 18
-#define butRestar 5
-#define butCambio 19
 
-enum estado { s0, s1, s2, s3, s4};
+#define butSumar 18    // Pull-up interno
+#define butRestar 5    // Pull-down físico
+
+enum estado { s0, s1, s2, s3, s4 };
 
 // Variables globales
-uint8_t contador = 0;
-uint8_t tiempoAnteriorSumar = 0;
-uint8_t tiempoAnteriorRestar = 0;
-uint8_t tiempoRebote = 200; // 200 ms para antirebote
+int8_t contador = 0;
+unsigned long tiempoAnteriorSumar = 0;
+unsigned long tiempoAnteriorRestar = 0;
+const uint16_t tiempoRebote = 200;
 
 void actualizarLeds(uint8_t estados) {
+  digitalWrite(led1, LOW);
+  digitalWrite(led2, LOW);
+  digitalWrite(led3, LOW);
+  digitalWrite(led4, LOW);
+
   switch (estados) {
-    case s0:
-      digitalWrite(led1, LOW);
-      digitalWrite(led2, LOW);
-      digitalWrite(led3, LOW);
-      digitalWrite(led4, LOW);
-      break;
     case s1:
       digitalWrite(led1, HIGH);
       break;
@@ -51,23 +49,31 @@ void actualizarLeds(uint8_t estados) {
       digitalWrite(led3, HIGH);
       digitalWrite(led4, HIGH);
       break;
+    case s0: // Se tienen todos los leds apagados
+    default:
+      break;
   }
 }
 
 void setup() {
+  //Defincicion de entradas y salidas
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
   pinMode(led4, OUTPUT);
 
-  pinMode(butSumar, INPUT);
-  pinMode(butRestar, INPUT);
-  pinMode(butCambio, INPUT);
+  // Teniendo uno de los botones con pullup interno
+  pinMode(butSumar, INPUT_PULLUP);  // Pull-up interno
+  pinMode(butRestar, INPUT);        // Pull-down físico (resistencia a GND)
+
+  //Se llama a la funcion
   actualizarLeds(contador);
 }
 
 void loop() {
-  uint tiempoActual = millis();
+  // unsigned long es utilizado por el millis
+  // Debido a que puede transcurrir un tiempo largo
+  unsigned long tiempoActual = millis();
 
   // Botón Sumar
   if (digitalRead(butSumar) == LOW && (tiempoActual - tiempoAnteriorSumar > tiempoRebote)) {
@@ -75,13 +81,20 @@ void loop() {
     contador++;
     if (contador > 4) contador = 0;
     actualizarLeds(contador);
+
+    // Esperar a que el botón se libere
+    while (digitalRead(butSumar) == LOW); 
+    delay(10); // Antirebote para la lectura del boton
   }
 
-  // Botón Restar
-  if (digitalRead(butRestar) == LOW && (tiempoActual - tiempoAnteriorRestar > tiempoRebote)) {
+  // Botón Restar 
+  if (digitalRead(butRestar) == HIGH && (tiempoActual - tiempoAnteriorRestar > tiempoRebote)) {
     tiempoAnteriorRestar = tiempoActual;
     contador--;
     if (contador < 0) contador = 4;
     actualizarLeds(contador);
-  }
+
+    // Esperar a que el botón se libere
+    while (digitalRead(butRestar) == HIGH); 
+    delay(10); // Antirebote para la lectura del boton
 }
