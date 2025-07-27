@@ -4,97 +4,76 @@
 // Nicole Rodriguez
 // 21/07/2025
 
-#include <Arduino.h>
+ #include <Arduino.h>
 #include <stdint.h>
 
-// Definiciones de pines
-#define led1 13
-#define led2 12
-#define led3 14
-#define led4 27
+// Pines de LEDs (encendido secuencial del 1 al 4)
+const uint8_t led1 = 13;
+const uint8_t led2 = 12;
+const uint8_t led3 = 14;
+const uint8_t led4 = 27;
 
-#define butSumar 18    // Pull-up interno
-#define butRestar 5    // Pull-down físico
-
-enum estado { s0, s1, s2, s3, s4 };
+// Botones
+const uint8_t butSumar = 18; // Pull-up interno (activo en LOW)
+const uint8_t butRestar = 5; // Pull-down físico (activo en HIGH)
 
 // Variables globales
 int8_t contador = 0;
-unsigned long tiempoAnteriorSumar = 0;
-unsigned long tiempoAnteriorRestar = 0;
-const uint16_t tiempoRebote = 200;
+uint32_t tiempoAnteriorSumar = 0;
+uint32_t tiempoAnteriorRestar = 0;
+const uint16_t tiempoRebote = 200; // milisegundos
 
-void actualizarLeds(uint8_t estados) {
+void actualizarLeds(uint8_t estado) {
+  // Apagar todos los LEDs primero
   digitalWrite(led1, LOW);
   digitalWrite(led2, LOW);
   digitalWrite(led3, LOW);
   digitalWrite(led4, LOW);
 
-  switch (estados) {
-    case s1:
-      digitalWrite(led1, HIGH);
-      break;
-    case s2:
-      digitalWrite(led1, HIGH);
-      digitalWrite(led2, HIGH);
-      break;
-    case s3:
-      digitalWrite(led1, HIGH);
-      digitalWrite(led2, HIGH);
-      digitalWrite(led3, HIGH);
-      break;
-    case s4:
-      digitalWrite(led1, HIGH);
-      digitalWrite(led2, HIGH);
-      digitalWrite(led3, HIGH);
-      digitalWrite(led4, HIGH);
-      break;
-    case s0: // Se tienen todos los leds apagados
-    default:
-      break;
-  }
+  // Encender LEDs según el número actual
+  if (estado >= 1) digitalWrite(led1, HIGH);
+  if (estado >= 2) digitalWrite(led2, HIGH);
+  if (estado >= 3) digitalWrite(led3, HIGH);
+  if (estado >= 4) digitalWrite(led4, HIGH);
 }
 
 void setup() {
-  //Defincicion de entradas y salidas
+  // LEDs como salida
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
   pinMode(led4, OUTPUT);
 
-  // Teniendo uno de los botones con pullup interno
-  pinMode(butSumar, INPUT_PULLUP);  // Pull-up interno
-  pinMode(butRestar, INPUT);        // Pull-down físico (resistencia a GND)
+  // Botones como entrada
+  pinMode(butSumar, INPUT_PULLUP); // usa pull-up interno
+  pinMode(butRestar, INPUT);       // pull-down físico
 
-  //Se llama a la funcion
+  // Estado inicial
   actualizarLeds(contador);
 }
 
 void loop() {
-  // unsigned long es utilizado por el millis
-  // Debido a que puede transcurrir un tiempo largo
-  unsigned long tiempoActual = millis();
+  uint32_t tiempoActual = millis();
 
   // Botón Sumar
   if (digitalRead(butSumar) == LOW && (tiempoActual - tiempoAnteriorSumar > tiempoRebote)) {
     tiempoAnteriorSumar = tiempoActual;
     contador++;
-    if (contador > 4) contador = 0;
+    if (contador > 4) contador = 0; // Reinicia al llegar a 5
     actualizarLeds(contador);
-
-    // Esperar a que el botón se libere
-    while (digitalRead(butSumar) == LOW); 
-    delay(10); // Antirebote para la lectura del boton
+    while (digitalRead(butSumar) == LOW) delay(1); // Espera a que se suelte
+    delay(10); // Anti-rebote adicional
   }
 
-  // Botón Restar 
+  // Botón Restar
   if (digitalRead(butRestar) == HIGH && (tiempoActual - tiempoAnteriorRestar > tiempoRebote)) {
     tiempoAnteriorRestar = tiempoActual;
     contador--;
-    if (contador < 0) contador = 4;
+    if (contador < 0) contador = 4; // Vuelve a 4 si baja de 0
     actualizarLeds(contador);
+    while (digitalRead(butRestar) == HIGH) delay(1); // Espera a que se suelte
+    delay(10); // Anti-rebote adicional
+  }
 
-    // Esperar a que el botón se libere
-    while (digitalRead(butRestar) == HIGH); 
-    delay(10); // Antirebote para la lectura del boton
+  delay(10); // Estabilidad general
 }
