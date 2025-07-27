@@ -19,38 +19,44 @@ uint8_t butRestar = 5;    // Pull-down físico (activo en HIGH)
 
 // Variables globales
 int8_t contador = 0;
-bool botonSueltoSumar = true;
-bool botonSueltoRestar = true;
-uint32_t tiempoAnteriorSumar = 0;
-uint32_t tiempoAnteriorRestar = 0;
+uint16_t tiempoAnteriorSumar = 0;
+uint16_t tiempoAnteriorRestar = 0;
 const uint16_t tiempoRebote = 200; // ms para anti-rebote
-
-void actualizarLeds(uint8_t estado) {
-  // Primero apagamos todos los LEDs ?
-  digitalWrite(led1, LOW);
-  digitalWrite(led2, LOW);
-  digitalWrite(led3, LOW);
-  digitalWrite(led4, LOW);
 
   // Encendemos los LEDs correspondientes al estado
   switch(estado) {
     case 1:
       digitalWrite(led1, HIGH);
+      digitalWrite(led2, LOW);
+      digitalWrite(led3, LOW);
+      digitalWrite(led4, LOW);
       break;
     case 2:
+      digitalWrite(led1, LOW);
       digitalWrite(led2, HIGH);
+      digitalWrite(led3, LOW);
+      digitalWrite(led4, LOW);
       break;
     case 3:
+      digitalWrite(led1, LOW);
+      digitalWrite(led2, LOW);
       digitalWrite(led3, HIGH);
+      digitalWrite(led4, LOW);
       break;
     case 4:
+      digitalWrite(led1, LOW);
+      digitalWrite(led2, LOW);
+      digitalWrite(led3, LOW);
       digitalWrite(led4, HIGH);
       break;
     default:
       // Todos los LEDs permanecen apagados
+      digitalWrite(led1, LOW);
+      digitalWrite(led2, LOW);
+      digitalWrite(led3, LOW);
+      digitalWrite(led4, LOW);
       break;
   }
-}
 
 void setup() {
   // Configuración de pines de LEDs como salidas
@@ -72,29 +78,22 @@ void loop() {
 
   // Botón Sumar
   if(digitalRead(butSumar) == LOW) {
-    if(botonSueltoSumar && (tiempoActual - tiempoAnteriorSumar >= tiempoRebote)) {
+    if(butSumar && (tiempoActual - tiempoAnteriorSumar >= tiempoRebote)) {
       tiempoAnteriorSumar = tiempoActual;
       contador++;
     	if(contador > 4) contador = 0;
       actualizarLeds(contador);
-      botonSueltoSumar = false;
     }
-  } else {
-    botonSueltoSumar = true;
   }
 
   // Botón Restar
   if(digitalRead(butRestar) == HIGH) {
-    if(botonSueltoRestar && (tiempoActual - tiempoAnteriorRestar >= tiempoRebote)) {
+    if(butRestar && (tiempoActual - tiempoAnteriorRestar >= tiempoRebote)) {
       tiempoAnteriorRestar = tiempoActual;
       contador--;
     if(contador < 0) contador = 4;
       actualizarLeds(contador);
-      botonSueltoRestar = false;
     }
-  } else {
-    botonSueltoRestar = true;
   }
-  
   delay(10);
 }
