@@ -1,54 +1,69 @@
 // Universidad del Valle de Guatemala
-// BE3029 - Electrónica Digital 2
-// Práctica de laboratorio 2
+// BE3029 - Electronica Digital 2
+// Practica de laboratorio 2
 // Nicole Rodriguez
 // 21/07/2025
 
- #include <Arduino.h>
+// Librerias
+#include <Arduino.h>
 #include <stdint.h>
 
-// Pines de LEDs (encendido secuencial del 1 al 4)
-const uint8_t led1 = 13;
-const uint8_t led2 = 12;
-const uint8_t led3 = 14;
-const uint8_t led4 = 27;
+// Definición de pines
+uint8_t led1 = 13;
+uint8_t led2 = 12;
+uint8_t led3 = 25;
+uint8_t led4 = 27;
 
-// Botones
-const uint8_t butSumar = 18; // Pull-up interno (activo en LOW)
-const uint8_t butRestar = 5; // Pull-down físico (activo en HIGH)
+uint8_t butSumar = 18;    // Pull-up interno (activo en LOW)
+uint8_t butRestar = 5;    // Pull-down físico (activo en HIGH)
 
 // Variables globales
 int8_t contador = 0;
+bool botonSueltoSumar = true;
+bool botonSueltoRestar = true;
 uint32_t tiempoAnteriorSumar = 0;
 uint32_t tiempoAnteriorRestar = 0;
-const uint16_t tiempoRebote = 200; // milisegundos
+const uint16_t tiempoRebote = 200; // ms para anti-rebote
 
 void actualizarLeds(uint8_t estado) {
-  // Apagar todos los LEDs primero
+  // Primero apagamos todos los LEDs ?
   digitalWrite(led1, LOW);
   digitalWrite(led2, LOW);
   digitalWrite(led3, LOW);
   digitalWrite(led4, LOW);
 
-  // Encender LEDs según el número actual
-  if (estado >= 1) digitalWrite(led1, HIGH);
-  if (estado >= 2) digitalWrite(led2, HIGH);
-  if (estado >= 3) digitalWrite(led3, HIGH);
-  if (estado >= 4) digitalWrite(led4, HIGH);
+  // Encendemos los LEDs correspondientes al estado
+  switch(estado) {
+    case 1:
+      digitalWrite(led1, HIGH);
+      break;
+    case 2:
+      digitalWrite(led2, HIGH);
+      break;
+    case 3:
+      digitalWrite(led3, HIGH);
+      break;
+    case 4:
+      digitalWrite(led4, HIGH);
+      break;
+    default:
+      // Todos los LEDs permanecen apagados
+      break;
+  }
 }
 
 void setup() {
-  // LEDs como salida
+  // Configuración de pines de LEDs como salidas
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
   pinMode(led4, OUTPUT);
 
-  // Botones como entrada
-  pinMode(butSumar, INPUT_PULLUP); // usa pull-up interno
-  pinMode(butRestar, INPUT);       // pull-down físico
+  // Configuración de pines de botones
+  pinMode(butSumar, INPUT_PULLUP);  // Configuración pull-up interna
+  pinMode(butRestar, INPUT);        // Resistencia pull-down física de 10kΩ
 
-  // Estado inicial
+  // Inicialización de LEDs
   actualizarLeds(contador);
 }
 
@@ -56,24 +71,30 @@ void loop() {
   uint32_t tiempoActual = millis();
 
   // Botón Sumar
-  if (digitalRead(butSumar) == LOW && (tiempoActual - tiempoAnteriorSumar > tiempoRebote)) {
-    tiempoAnteriorSumar = tiempoActual;
-    contador++;
-    if (contador > 4) contador = 0; // Reinicia al llegar a 5
-    actualizarLeds(contador);
-    while (digitalRead(butSumar) == LOW) delay(1); // Espera a que se suelte
-    delay(10); // Anti-rebote adicional
+  if(digitalRead(butSumar) == LOW) {
+    if(botonSueltoSumar && (tiempoActual - tiempoAnteriorSumar >= tiempoRebote)) {
+      tiempoAnteriorSumar = tiempoActual;
+      contador++;
+    	if(contador > 4) contador = 0;
+      actualizarLeds(contador);
+      botonSueltoSumar = false;
+    }
+  } else {
+    botonSueltoSumar = true;
   }
 
   // Botón Restar
-  if (digitalRead(butRestar) == HIGH && (tiempoActual - tiempoAnteriorRestar > tiempoRebote)) {
-    tiempoAnteriorRestar = tiempoActual;
-    contador--;
-    if (contador < 0) contador = 4; // Vuelve a 4 si baja de 0
-    actualizarLeds(contador);
-    while (digitalRead(butRestar) == HIGH) delay(1); // Espera a que se suelte
-    delay(10); // Anti-rebote adicional
+  if(digitalRead(butRestar) == HIGH) {
+    if(botonSueltoRestar && (tiempoActual - tiempoAnteriorRestar >= tiempoRebote)) {
+      tiempoAnteriorRestar = tiempoActual;
+      contador--;
+    if(contador < 0) contador = 4;
+      actualizarLeds(contador);
+      botonSueltoRestar = false;
+    }
+  } else {
+    botonSueltoRestar = true;
   }
-
-  delay(10); // Estabilidad general
+  
+  delay(10);
 }
