@@ -8,92 +8,215 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-// Definición de pines
-uint8_t led1 = 13;
-uint8_t led2 = 12;
-uint8_t led3 = 25;
-uint8_t led4 = 27;
+// Definicion de pines
+const uint8_t led1 = 13;
+const uint8_t led2 = 12;
+const uint8_t led3 = 25;
+const uint8_t led4 = 27;
+const uint8_t modoLED = 26;  // Nuevo LED para indicar modo binario
 
-uint8_t butSumar = 18;    // Pull-up interno (activo en LOW)
-uint8_t butRestar = 5;    // Pull-down físico (activo en HIGH)
+const uint8_t butSumar = 18;    // Pull-up interno
+const uint8_t butRestar = 5;    // Pull-down físico
+const uint8_t but3 = 19;        // Pull-down interno para cambio de modo
 
 // Variables globales
-int8_t contador = 0;
-uint16_t tiempoAnteriorSumar = 0;
-uint16_t tiempoAnteriorRestar = 0;
-const uint16_t tiempoRebote = 200; // ms para anti-rebote
+bool modoBinario = false;
+int contador = 0;
+int contadorBinario = 0;
 
-  // Encendemos los LEDs correspondientes al estado
-  switch(estado) {
-    case 1:
-      digitalWrite(led1, HIGH);
-      digitalWrite(led2, LOW);
-      digitalWrite(led3, LOW);
-      digitalWrite(led4, LOW);
-      break;
-    case 2:
-      digitalWrite(led1, LOW);
-      digitalWrite(led2, HIGH);
-      digitalWrite(led3, LOW);
-      digitalWrite(led4, LOW);
-      break;
-    case 3:
-      digitalWrite(led1, LOW);
-      digitalWrite(led2, LOW);
-      digitalWrite(led3, HIGH);
-      digitalWrite(led4, LOW);
-      break;
-    case 4:
-      digitalWrite(led1, LOW);
-      digitalWrite(led2, LOW);
-      digitalWrite(led3, LOW);
-      digitalWrite(led4, HIGH);
-      break;
-    default:
-      // Todos los LEDs permanecen apagados
-      digitalWrite(led1, LOW);
-      digitalWrite(led2, LOW);
-      digitalWrite(led3, LOW);
-      digitalWrite(led4, LOW);
-      break;
+unsigned long tAntSumar = 0;
+unsigned long tAntRestar = 0;
+unsigned long tAntModo = 0;
+const unsigned long tiempoRebote = 200;
+bool estadoAnteriorBut3 = false;
+
+void apagarLeds() {
+  digitalWrite(led1, LOW);
+  digitalWrite(led2, LOW);
+  digitalWrite(led3, LOW);
+  digitalWrite(led4, LOW);
+}
+
+// Mostrar en binario (0 - 15)con switch-case
+void actualizarLedsB(int valor) {
+  apagarLeds();
+  switch (valor) {
+    case 0: 
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, LOW); 
+    digitalWrite(led4, LOW);
+    break;
+    case 1:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, LOW); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 2:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, LOW); 
+    break;
+    case 3:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 4:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 5:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, LOW); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 6:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, LOW); 
+    digitalWrite(led2, HIGH);
+    break;
+    case 7:  
+    digitalWrite(led1, LOW); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, HIGH); 
+    digitalWrite(led2, HIGH);
+    break;
+    case 8:  
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 9:  
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, LOW); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 10: 
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, LOW); 
+    break;
+    case 11: 
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, LOW); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 12: 
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, LOW); 
+    digitalWrite(led4, LOW); 
+    break;
+    case 13: 
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, LOW); 
+    digitalWrite(led4, HIGH); 
+    break;
+    case 14: 
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, LOW); 
+    break;
+    case 15: 
+    digitalWrite(led1, HIGH); 
+    digitalWrite(led2, HIGH); 
+    digitalWrite(led3, HIGH); 
+    digitalWrite(led4, HIGH); 
+    break;
+    default: break;
   }
+}
+
+// Mostrar en modo década (0–4)
+void actualizarLedsD(int valor) {
+  apagarLeds();
+  switch (valor) {
+    case 1: 
+    digitalWrite(led1, HIGH); 
+    break;
+    case 2: 
+    digitalWrite(led2, HIGH); 
+    break;
+    case 3: 
+    digitalWrite(led3, HIGH); 
+    break;
+    case 4: 
+    digitalWrite(led4, HIGH); 
+    break;
+    default: break;  // En caso 0, todos los LEDs están apagados
+  }
+}
 
 void setup() {
-  // Configuración de pines de LEDs como salidas
+  // Configuracion de pines LEDs como salidas
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
   pinMode(led4, OUTPUT);
 
-  // Configuración de pines de botones
-  pinMode(butSumar, INPUT_PULLUP);  // Configuración pull-up interna
-  pinMode(butRestar, INPUT);        // Resistencia pull-down física de 10kΩ
-
-  // Inicialización de LEDs
-  actualizarLeds(contador);
+  // Configuracion de pines de botones
+  pinMode(butSumar, INPUT_PULLUP);
+  pinMode(butRestar, INPUT);         // pull-down físico
+  pinMode(but3, INPUT_PULLDOWN);     // pull-down interno
 }
 
 void loop() {
-  uint32_t tiempoActual = millis();
+  unsigned long tActual = millis();
+  // Cambio de modo
+  bool estadoActualBut3 = digitalRead(but3);
+  if (estadoActualBut3 && !estadoAnteriorBut3 && (tActual - tAntModo > tiempoRebote)) {
+    modoBinario = !modoBinario;
+    tAntModo = tActual;
 
-  // Botón Sumar
-  if(digitalRead(butSumar) == LOW) {
-    if(butSumar && (tiempoActual - tiempoAnteriorSumar >= tiempoRebote)) {
-      tiempoAnteriorSumar = tiempoActual;
-      contador++;
-    	if(contador > 4) contador = 0;
-      actualizarLeds(contador);
+    // Reiniciar contadores
+    contador = 0;
+    contadorBinario = 0;
+
+    // Mostrar valor inicial del nuevo modo
+    if (modoBinario) actualizarLedsB(contadorBinario);
+    else actualizarLedsD(contador);
+  }
+  estadoAnteriorBut3 = estadoActualBut3;
+
+  // Configuracion de boton sumar en cualquier modo
+  if (digitalRead(butSumar) == LOW && (tActual - tAntSumar > tiempoRebote)) {
+    tAntSumar = tActual;
+    if (modoBinario) {
+      contadorBinario = (contadorBinario + 1) % 16;
+      actualizarLedsB(contadorBinario);
+    } else {
+      contador = (contador + 1) % 5;
+      actualizarLedsD(contador);
     }
   }
 
-  // Botón Restar
-  if(digitalRead(butRestar) == HIGH) {
-    if(butRestar && (tiempoActual - tiempoAnteriorRestar >= tiempoRebote)) {
-      tiempoAnteriorRestar = tiempoActual;
+  // Configuracion de boton restar en cualquier modo
+  if (digitalRead(butRestar) == HIGH && (tActual - tAntRestar > tiempoRebote)) {
+    tAntRestar = tActual;
+    if (modoBinario) {
+      contadorBinario--;
+      if (contadorBinario < 0) contadorBinario = 15;
+      actualizarLedsB(contadorBinario);
+    } else {
       contador--;
-    if(contador < 0) contador = 4;
-      actualizarLeds(contador);
+      if (contador < 0) contador = 4;
+      actualizarLedsD(contador);
     }
   }
-  delay(10);
 }
